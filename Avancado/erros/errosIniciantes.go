@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func main() {
+func zelo() {
 	user, err := NewUser(true)
 
 	if err != nil {
