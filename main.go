@@ -1,15 +1,35 @@
 package main
 
+import (
+	"fmt"
+	"net/http"
+	"sync"
+	"time"
+)
+
 func main() {
-}
+	start := time.Now()
 
-func Contains[T comparable](s []T, cmp T) bool {
-	// slices.Contains()
+	const n = 10
 
-	for _, str := range s {
-		if str == cmp {
-			return true
-		}
+	var wg sync.WaitGroup
+	wg.Add(n)
+
+	for i := 0; i <= n; i++ {
+		go func() {
+			defer wg.Done()
+			resp, err := http.Get("https://google.com")
+
+			if err != nil {
+				panic(err)
+			}
+
+			defer resp.Body.Close()
+			fmt.Println("ok")
+		}()
 	}
-	return false
+
+	wg.Wait()
+	fmt.Println(time.Since(start))
+
 }

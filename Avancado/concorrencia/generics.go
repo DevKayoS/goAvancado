@@ -64,3 +64,14 @@ type MinhaInterface interface {
 func foo3[T MinhaInterface](arg T) {
 	arg.fazer()
 }
+
+func Contains[T comparable](s []T, cmp T) bool {
+	// slices.Contains()
+
+	for _, str := range s {
+		if str == cmp {
+			return true
+		}
+	}
+	return false
+}
