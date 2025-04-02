@@ -1,55 +1,61 @@
 package main
 
 import (
-	"context"
-	"errors"
+	"bufio"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"sync"
-	"time"
+	"os"
+	"strconv"
+	"strings"
 )
 
+type Measurement struct {
+	Min   float64
+	Max   float64
+	Sum   float64
+	Count int64
+}
+
 func main() {
-	start := time.Now()
+	measurements, err := os.Open("measurements.txt")
 
-	const n = 10
-
-	var wg sync.WaitGroup
-	wg.Add(n)
-
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
-	defer cancel()
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(10 * time.Second)
-		fmt.Fprintln(w, "hello, World!")
-	}))
-
-	for i := 0; i <= n; i++ {
-		go func(ctx context.Context) {
-			defer wg.Done()
-
-			req, err := http.NewRequestWithContext(ctx, "GET", server.URL, nil)
-
-			if err != nil {
-				panic(err)
-			}
-
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				if errors.Is(err, context.DeadlineExceeded) {
-					fmt.Println("Timout")
-					return
-				}
-				panic(err)
-			}
-			defer resp.Body.Close()
-		}(ctx)
+	if err != nil {
+		panic(err)
 	}
 
-	wg.Wait()
-	fmt.Println(time.Since(start))
+	defer measurements.Close()
 
+	dados := make(map[string]Measurement)
+
+	scanner := bufio.NewScanner(measurements)
+	for scanner.Scan() {
+		rawData := scanner.Text()
+		semicolon := strings.Index(rawData, ";")
+		location := rawData[:semicolon]
+		rawTemp := rawData[semicolon+1:]
+
+		temp, _ := strconv.ParseFloat(rawTemp, 64)
+
+		measurement, ok := dados[location]
+
+		if !ok {
+			measurement = Measurement{
+				Min:   temp,
+				Max:   temp,
+				Sum:   temp,
+				Count: 1,
+			}
+		} else {
+			measurement.Min = min(measurement.Min, temp)
+			measurement.Max = max(measurement.Max, temp)
+			measurement.Sum += temp
+			measurement.Count++
+		}
+
+		dados[location] = measurement
+
+	}
+
+	for name, measurement := range dados {
+		fmt.Printf("%s: %#+v\n", name, measurement)
+	}
 }
